@@ -1,0 +1,17 @@
+# available db connections
+engines:
+  default:
+    sqlalchemy.url: postgresql://su_user:asdf@127.0.0.1:5432/su_test
+    sqlalchemy.strategy: threadlocal
+    sqlalchemy.pool_size: 5
+    sqlalchemy.max_overflow: 100
+  slave1:
+    sqlalchemy.url: postgresql://su_user:asdf@127.0.0.1:5432/su_test
+    sqlalchemy.strategy: threadlocal
+    sqlalchemy.pool_size: 5
+    sqlalchemy.max_overflow: 100
+  slave2:
+    sqlalchemy.url: postgresql://su_user:asdf@127.0.0.1:5432/su_test
+    sqlalchemy.strategy: threadlocal
+    sqlalchemy.pool_size: 5
+    sqlalchemy.max_overflow: 100

@@ -1,0 +1,234 @@
+# available db connections
+engines:
+  default:
+    sqlalchemy.url: postgresql://su_user:asdf@127.0.0.1:5432/su
+    sqlalchemy.strategy: threadlocal
+    sqlalchemy.pool_size: 1500
+    sqlalchemy.max_overflow: 1000
+  slave1:
+    sqlalchemy.url: postgresql://su_user:asdf@127.0.0.1:5432/su
+    sqlalchemy.strategy: threadlocal
+    sqlalchemy.pool_size: 1500
+    sqlalchemy.max_overflow: 1000
+  slave2:
+    sqlalchemy.url: postgresql://su_user:asdf@127.0.0.1:5432/su
+    sqlalchemy.strategy: threadlocal
+    sqlalchemy.pool_size: 1500
+    sqlalchemy.max_overflow: 1000
+
+# available clusters
+clusters:
+  cluster_body:
+    masters:
+      - default
+    slaves:
+      - slave1
+      - slave2
+  cluster_prop:
+    masters:
+      - slave1
+    slaves:
+      - slave2
+      - default
+    avoid_master_read: true
+  cluster_rel:
+    masters:
+      - slave1
+    slaves:
+      - default
+      - slave2
+
+# abstract table structures
+base_tables:
+  tbl_entity:
+    columns:
+      - name: entity_id
+        type: BigInteger
+        primary_key: true
+      - name: ups
+        type: Integer
+        default: 0
+        nullable: false
+      - name: downs
+        type: Integer
+        default: 0
+        nullable: false
+      - name: deleted
+        type: Boolean
+        default: false
+        nullable: false
+      - name: spam
+        type: Boolean
+        default: false
+        nullable: false
+      - name: created_at
+        type: DateTime(timezone=True)
+        default: func.now()
+        nullable: false
+      - name: updated_at
+        type: DateTime(timezone=True)
+        default: func.now()
+        nullable: false
+    indexes:
+      - name: entity_id
+        columns: entity_id
+      - name: created_at
+        columns: created_at
+      - name: updated_at
+        columns: updated_at
+
+  tbl_prop:
+    columns:
+      - name: body_id
+        type: BigInteger
+        primary_key: true
+        nullable: false
+      - name: key
+        type: String
+        primary_key: true
+        nullable: false
+      - name: value
+        type: String
+      - name: kind
+        type: String
+    indexes:
+      - name: body_id
+        columns: body_id
+
+  tbl_rel:
+    columns:
+      - name: rel_id
+        type: BigInteger
+        primary_key: true
+      - name: entity1_id
+        type: BigInteger
+        nullable: false
+      - name: entity2_id
+        type: BigInteger
+        nullable: false
+      - name: label
+        type: String
+        nullable: false
+      - name: created_at
+        type: DateTime(timezone=True)
+        default: func.now()
+        nullable: false
+      - name: updated_at
+        type: DateTime(timezone=True)
+        default: func.now()
+        nullable: false
+    indexes:
+      - name: entity1_id
+        columns: entity1_id
+      - name: entity2_id
+        columns: entity2_id
+    uniqueconstraints:
+      - entity1_id, entity2_id, label
+
+# real tables to be deployed on defined clusters
+tables:
+  tbl_entity_user:
+    cluster: cluster_body
+    inherit: tbl_entity
+    avoid_master_read: false
+    columns:
+      - name: role
+        type: Integer
+        default: 0
+        nullable: false
+  tbl_prop_user:
+    cluster: cluster_prop
+    inherit: tbl_prop
+    avoid_master_read: true
+
+  tbl_entity_post:
+    cluster: cluster_body
+    inherit: tbl_entity
+    avoid_master_read: false
+    columns:
+      - name: user_id
+        type: Integer
+        nullable: false
+  tbl_prop_post:
+    cluster: cluster_prop
+    inherit: tbl_prop
+    avoid_master_read: true
+
+  tbl_entity_comment:
+    cluster: cluster_body
+    inherit: tbl_entity
+    avoid_master_read: false
+    columns:
+      - name: user_id
+        type: Integer
+        nullable: false
+      - name: target_type
+        type: String
+        nullable: false
+      - name: target_id
+        type: Integer
+        nullable: false
+  tbl_prop_comment:
+    cluster: cluster_prop
+    inherit: tbl_prop
+    avoid_master_read: true
+
+  tbl_rel_friendship:
+    cluster: cluster_rel
+    inherit: tbl_rel
+    avoid_master_read: false
+  tbl_prop_friendship:
+    cluster: cluster_prop
+    inherit: tbl_prop
+    avoid_master_read: false
+
+  tbl_rel_vote_user_post:
+    cluster: cluster_rel
+    inherit: tbl_rel
+    avoid_master_read: false
+  tbl_prop_vote_user_post:
+    cluster: cluster_prop
+    inherit: tbl_prop
+    avoid_master_read: false
+
+  tbl_rel_vote_user_comment:
+    cluster: cluster_rel
+    inherit: tbl_rel
+    avoid_master_read: false
+  tbl_prop_vote_user_comment:
+    cluster: cluster_prop
+    inherit: tbl_prop
+    avoid_master_read: false
+
+# definitions required by KVSManager
+entities:
+  user:
+    body: tbl_entity_user
+    prop: tbl_prop_user
+
+  post:
+    body: tbl_entity_post
+    prop: tbl_prop_post
+
+  comment:
+    body: tbl_entity_comment
+    prop: tbl_prop_comment
+
+relations:
+  friendship:
+    body: tbl_rel_friendship
+    prop: tbl_prop_friendship
+    entity_left: user
+    entity_right: user
+
+  vote_user_post:
+    body: tbl_rel_vote_user_post
+    prop: tbl_prop_vote_user_post
+    entity_left: user
+    entity_right: post
+
+  vote_user_comment:
+    body: tbl_rel_vote_user_comment
+    prop: tbl_prop_vote_user_comment
+    entity_left: user
+    entity_right: comment
